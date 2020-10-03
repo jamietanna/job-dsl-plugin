@@ -1,6 +1,9 @@
 package javaposse.jobdsl.plugin
 
 import com.cloudbees.hudson.plugins.folder.Folder
+import com.cloudbees.hudson.plugins.folder.properties.AuthorizationMatrixProperty
+import com.cloudbees.hudson.plugins.folder.properties.FolderCredentialsProvider
+import com.cloudbees.plugins.credentials.domains.DomainCredentials
 import com.google.common.io.Resources
 import hudson.FilePath
 import hudson.model.AbstractBuild
@@ -630,6 +633,45 @@ class JenkinsJobManagementSpec extends Specification {
         then:
         Exception e = thrown(DslException)
         e.message == 'Type of item "my-job" does not match existing type, item type can not be changed'
+    }
+
+    def 'createOrUpdateConfig should ignore other properties on the folder'() {
+        setup:
+        Folder folder = jenkinsRule.createProject(Folder.class, 'folder')
+        folder.addProperty(new AuthorizationMatrixProperty(Collections.emptyMap()));
+
+        when:
+        jobManagement.createOrUpdateConfig(createItem('folder', '/folder.xml'), false)
+
+        then:
+        def actual = jenkinsRule.jenkins.getItem('folder')
+        actual.properties.size() == 0
+    }
+
+    def 'createOrUpdateConfig should preserve credentials if they exist on a folder'() {
+        setup:
+        Folder folder = jenkinsRule.createProject(Folder.class, 'folder')
+        folder.addProperty(new FolderCredentialsProvider.FolderCredentialsProperty(new DomainCredentials[0]));
+
+        when:
+        jobManagement.createOrUpdateConfig(createItem('folder', '/folder.xml'), false)
+
+        then:
+        def actual = jenkinsRule.jenkins.getItem('folder')
+        actual.properties.size() == 1
+    }
+
+    def 'createOrUpdateConfig should not preserve credentials if they exist on a folder, but we want to `ignoreExisting`'() {
+        setup:
+        Folder folder = jenkinsRule.createProject(Folder.class, 'folder')
+        folder.addProperty(new FolderCredentialsProvider.FolderCredentialsProperty(new DomainCredentials[0]));
+
+        when:
+        jobManagement.createOrUpdateConfig(createItem('folder', '/folder.xml'), true)
+
+        then:
+        def actual = jenkinsRule.jenkins.getItem('folder')
+        actual.properties.size() == 0
     }
 
     def 'createOrUpdateView should work if view type changes'() {
