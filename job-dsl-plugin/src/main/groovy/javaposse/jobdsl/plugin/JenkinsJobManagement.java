@@ -10,7 +10,6 @@ import com.cloudbees.hudson.plugins.folder.properties.FolderCredentialsProvider;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.Iterables;
 import com.thoughtworks.xstream.io.xml.XppDriver;
-import groovy.lang.Closure;
 import groovy.util.Node;
 import groovy.util.XmlParser;
 import hudson.FilePath;
@@ -41,13 +40,11 @@ import java.lang.reflect.InvocationTargetException;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import java.util.stream.Collectors;
 import javaposse.jobdsl.dsl.AbstractJobManagement;
 import javaposse.jobdsl.dsl.DslException;
 import javaposse.jobdsl.dsl.DslScriptException;
@@ -519,7 +516,7 @@ public class JenkinsJobManagement extends AbstractJobManagement {
       if (maybeXml.isPresent())
         try {
           Node node = new XmlParser().parseText(XML_HEADER + maybeXml.get());
-          ConfiguringClosure.merge(maybeXml.get(), dslItem);
+          DslItemConfigurer.merge(node, dslItem);
         } catch (IOException | ParserConfigurationException | SAXException e) {
           e.printStackTrace(); // TODO
         }
