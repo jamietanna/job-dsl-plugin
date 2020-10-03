@@ -447,6 +447,7 @@ public class JenkinsJobManagement extends AbstractJobManagement {
         String config = dslItem.getXml();
 
         item.checkPermission(Item.EXTENDED_READ);
+        mergeCredentials(item, dslItem);
 
         // Leverage XMLUnit to perform diffs
         Diff diff;
@@ -474,6 +475,10 @@ public class JenkinsJobManagement extends AbstractJobManagement {
             throw new DslException(e);
         }
         return true;
+    }
+
+    private void mergeCredentials(AbstractItem item, javaposse.jobdsl.dsl.Item dslItem) {
+//        String o = "<?xml version='1.1' encoding='UTF-8'?>" + Items.XSTREAM2.toXML(item.properties.get(0)); Object xml =new XmlParser().parseText(o);  dslItem.configure { p -> p / 'properties' << xml}; config = dslItem.getXml();
     }
 
     private void checkItemType(AbstractItem item, javaposse.jobdsl.dsl.Item dslItem) {
