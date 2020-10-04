@@ -26,6 +26,7 @@ import hudson.model.listeners.SaveableListener
 import hudson.tasks.ArtifactArchiver
 import hudson.tasks.Fingerprinter
 import javaposse.jobdsl.dsl.ConfigurationMissingException
+import javaposse.jobdsl.dsl.ContextHelper
 import javaposse.jobdsl.dsl.DslException
 import javaposse.jobdsl.dsl.DslScriptException
 import javaposse.jobdsl.dsl.Item
@@ -646,12 +647,6 @@ class JenkinsJobManagementSpec extends Specification {
         Folder folder = jenkinsRule.createProject(Folder, 'folder')
         folder.addProperty(createCredentialProperty())
 
-//        FreeStyleProject seedJob = folder.createProject(FreeStyleProject, 'seed')
-//        AbstractBuild build = seedJob.scheduleBuild2(0).get()
-//        JobManagement jobManagement = new JenkinsJobManagement(
-//                new PrintStream(buffer), [:], build, build.workspace, LookupStrategy.SEED_JOB
-//        )
-
         when:
         jobManagement.createOrUpdateConfig(createItem('folder', '/folder.xml'), false)
 
@@ -664,12 +659,6 @@ class JenkinsJobManagementSpec extends Specification {
         setup:
         Folder folder = jenkinsRule.createProject(Folder, 'folder')
         folder.addProperty(new FakeProperty())
-
-//        FreeStyleProject seedJob = folder.createProject(FreeStyleProject, 'seed')
-//        AbstractBuild build = seedJob.scheduleBuild2(0).get()
-//        JobManagement jobManagement = new JenkinsJobManagement(
-//                new PrintStream(buffer), [:], build, build.workspace , LookupStrategy.SEED_JOB
-//        )
 
         when:
         jobManagement.createOrUpdateConfig(createItem('folder', '/folder.xml'), false)
@@ -1005,6 +994,14 @@ class JenkinsJobManagementSpec extends Specification {
         noExceptionThrown()
     }
 
+    private static FolderCredentialsProvider.FolderCredentialsProperty createCredentialProperty() {
+        UsernamePasswordCredentialsImpl  credentials = new UsernamePasswordCredentialsImpl(CredentialsScope.GLOBAL, "", "", "", "")
+        DomainCredentials[] domainCredentials = new DomainCredentials[1]
+        domainCredentials[0] = new DomainCredentials(Domain.global(), Collections.singletonList(credentials))
+
+        return new FolderCredentialsProvider.FolderCredentialsProperty(domainCredentials)
+    }
+
     private static boolean isXmlIdentical(String expected, Node actual) throws Exception {
         XMLUnit.ignoreWhitespace = true
         XMLUnit.compareXML(loadResource(expected), nodeToString(actual)).identical()
@@ -1023,18 +1020,10 @@ class JenkinsJobManagementSpec extends Specification {
     private Item createItem(String name, String config) {
         new Item(jobManagement, name) {
             @Override
-            Node getNode() {
+            Node getNodeTemplate() {
                 new XmlParser().parse(JenkinsJobManagementSpec.getResourceAsStream(config))
             }
         }
-    }
-
-    private FolderCredentialsProvider.FolderCredentialsProperty createCredentialProperty() {
-        UsernamePasswordCredentialsImpl  credentials = new UsernamePasswordCredentialsImpl(CredentialsScope.GLOBAL, "", "", "", "")
-        DomainCredentials[] domainCredentials = new DomainCredentials[1]
-        domainCredentials[0] = new DomainCredentials(Domain.global(), Collections.singletonList(credentials))
-
-        return new FolderCredentialsProvider.FolderCredentialsProperty(domainCredentials)
     }
 
     private static class FakeProperty extends AbstractFolderProperty<AbstractFolder<?>> {
