@@ -513,21 +513,16 @@ public class JenkinsJobManagement extends AbstractJobManagement {
               .filter(p -> p instanceof FolderCredentialsProvider.FolderCredentialsProperty)
               .map(Items.XSTREAM2::toXML).findFirst();
 
-      if (maybeXml.isPresent())
+      if (maybeXml.isPresent()) {
         try {
+          LOGGER.log(Level.FINE, format("Merging credentials for %s", item.getName()));
           Node node = new XmlParser().parseText(XML_HEADER + maybeXml.get());
-          DslItemConfigurer.merge(node, dslItem);
+          DslItemConfigurer.mergeCredentials(node, dslItem);
         } catch (IOException | ParserConfigurationException | SAXException e) {
-          e.printStackTrace(); // TODO
+          throw new DslException(e);
         }
+      }
     }
-
-/*
-      String o = Items.XSTREAM2.toXML(item.properties.get(0))
- Object xml =new XmlParser().parseText(o)
-   dslItem.configure { p -> p / 'properties' << xml}
-    config = dslItem.getXml();
-    */
   }
 
   private void checkItemType(AbstractItem item, javaposse.jobdsl.dsl.Item dslItem) {

@@ -1,10 +1,16 @@
 package javaposse.jobdsl.plugin
 
+import com.cloudbees.hudson.plugins.folder.AbstractFolder
+import com.cloudbees.hudson.plugins.folder.AbstractFolderProperty
+import com.cloudbees.hudson.plugins.folder.AbstractFolderPropertyDescriptor
 import com.cloudbees.hudson.plugins.folder.Folder
-import com.cloudbees.hudson.plugins.folder.properties.AuthorizationMatrixProperty
 import com.cloudbees.hudson.plugins.folder.properties.FolderCredentialsProvider
+import com.cloudbees.plugins.credentials.CredentialsScope
+import com.cloudbees.plugins.credentials.domains.Domain
 import com.cloudbees.plugins.credentials.domains.DomainCredentials
+import com.cloudbees.plugins.credentials.impl.UsernamePasswordCredentialsImpl
 import com.google.common.io.Resources
+import hudson.Extension
 import hudson.FilePath
 import hudson.model.AbstractBuild
 import hudson.model.AllView
@@ -635,23 +641,16 @@ class JenkinsJobManagementSpec extends Specification {
         e.message == 'Type of item "my-job" does not match existing type, item type can not be changed'
     }
 
-    def 'createOrUpdateConfig should ignore other properties on the folder'() {
-        setup:
-        Folder folder = jenkinsRule.createProject(Folder.class, 'folder')
-        folder.addProperty(new AuthorizationMatrixProperty(Collections.emptyMap()));
-
-        when:
-        jobManagement.createOrUpdateConfig(createItem('folder', '/folder.xml'), false)
-
-        then:
-        def actual = jenkinsRule.jenkins.getItem('folder')
-        actual.properties.size() == 0
-    }
-
     def 'createOrUpdateConfig should preserve credentials if they exist on a folder'() {
         setup:
-        Folder folder = jenkinsRule.createProject(Folder.class, 'folder')
-        folder.addProperty(new FolderCredentialsProvider.FolderCredentialsProperty(new DomainCredentials[0]));
+        Folder folder = jenkinsRule.createProject(Folder, 'folder')
+        folder.addProperty(createCredentialProperty())
+
+//        FreeStyleProject seedJob = folder.createProject(FreeStyleProject, 'seed')
+//        AbstractBuild build = seedJob.scheduleBuild2(0).get()
+//        JobManagement jobManagement = new JenkinsJobManagement(
+//                new PrintStream(buffer), [:], build, build.workspace, LookupStrategy.SEED_JOB
+//        )
 
         when:
         jobManagement.createOrUpdateConfig(createItem('folder', '/folder.xml'), false)
@@ -661,13 +660,19 @@ class JenkinsJobManagementSpec extends Specification {
         actual.properties.size() == 1
     }
 
-    def 'createOrUpdateConfig should not preserve credentials if they exist on a folder, but we want to `ignoreExisting`'() {
+    def 'createOrUpdateConfig should ignore other properties on the folder'() {
         setup:
-        Folder folder = jenkinsRule.createProject(Folder.class, 'folder')
-        folder.addProperty(new FolderCredentialsProvider.FolderCredentialsProperty(new DomainCredentials[0]));
+        Folder folder = jenkinsRule.createProject(Folder, 'folder')
+        folder.addProperty(new FakeProperty())
+
+//        FreeStyleProject seedJob = folder.createProject(FreeStyleProject, 'seed')
+//        AbstractBuild build = seedJob.scheduleBuild2(0).get()
+//        JobManagement jobManagement = new JenkinsJobManagement(
+//                new PrintStream(buffer), [:], build, build.workspace , LookupStrategy.SEED_JOB
+//        )
 
         when:
-        jobManagement.createOrUpdateConfig(createItem('folder', '/folder.xml'), true)
+        jobManagement.createOrUpdateConfig(createItem('folder', '/folder.xml'), false)
 
         then:
         def actual = jenkinsRule.jenkins.getItem('folder')
@@ -1022,5 +1027,27 @@ class JenkinsJobManagementSpec extends Specification {
                 new XmlParser().parse(JenkinsJobManagementSpec.getResourceAsStream(config))
             }
         }
+    }
+
+    private FolderCredentialsProvider.FolderCredentialsProperty createCredentialProperty() {
+        UsernamePasswordCredentialsImpl  credentials = new UsernamePasswordCredentialsImpl(CredentialsScope.GLOBAL, "", "", "", "")
+        DomainCredentials[] domainCredentials = new DomainCredentials[1]
+        domainCredentials[0] = new DomainCredentials(Domain.global(), Collections.singletonList(credentials))
+
+        return new FolderCredentialsProvider.FolderCredentialsProperty(domainCredentials)
+    }
+
+    private static class FakeProperty extends AbstractFolderProperty<AbstractFolder<?>> {
+
+        @Extension(optional = true)
+        static class DescriptorImpl extends AbstractFolderPropertyDescriptor {
+
+            @Override
+            String getDisplayName() {
+                // nothing to be shown
+                return "";
+            }
+        }
+
     }
 }
